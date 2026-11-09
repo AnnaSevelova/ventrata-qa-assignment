@@ -1,0 +1,23 @@
+# Navigates back one page via the app-bar Back button.
+#
+# A single tap is not reliable here: right after a route transition Flutter
+# can ignore the tap, and on Questions the restored text-field focus can
+# open the keyboard, which eats the first tap. So: tap while we're still on
+# FROM_PAGE (max 3 tries), then require TO_PAGE.
+#
+# env: FROM_PAGE, TO_PAGE
+appId: com.ventrata.maestro_booking_demo
+---
+- repeat:
+    while:
+      visible:
+        id: ${FROM_PAGE}
+    times: 3
+    commands:
+      - waitForAnimationToEnd
+      - tapOn: Back
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: ${TO_PAGE}
+    timeout: 5000

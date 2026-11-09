@@ -1,0 +1,81 @@
+# Paid (non-promo) order goes through the card form.
+# Card form validation works, but in this build EVERY card payment is declined
+# ("test mode has no valid card configured") - this flow pins that behaviour
+# so a change to it is noticed. See REPORT.md.
+appId: com.ventrata.maestro_booking_demo
+name: Card payment - form validation and declined result
+tags:
+  - validation
+  - payment
+---
+- runScript:
+    file: ../scripts/test_data.js
+    env:
+      ADULTS: 1
+      CHILDREN: 0
+      MADAME_HOUR: 10
+- runFlow: ../subflows/book_until_checkout.yaml
+- runFlow: ../subflows/fill_contact_details.yaml
+- tapOn:
+    id: Checkout_PayOrConfirmButton
+- extendedWaitUntil:
+    visible:
+      id: Payment_Page
+    timeout: 5000
+
+# Name on card is prefilled from the contact details.
+- assertVisible:
+    id: Payment_NameOnCardField
+    text: Jana Tester
+- assertVisible:
+    text: '${"Pay " + output.td.totalPattern + " €"}'
+    childOf:
+      id: Payment_PayButton
+
+# Empty card form -> one error per field.
+- tapOn:
+    id: Payment_PayButton
+- assertVisible:
+    id: Payment_CardNumberError
+- assertVisible:
+    id: Payment_ExpiryError
+- assertVisible:
+    id: Payment_CvcError
+- assertNotVisible:
+    id: PaymentResult_ProcessingPage
+
+# Card number is formatted in groups of 4 and capped at 16 digits.
+- tapOn:
+    id: Payment_CardNumberField
+- inputText: '42424242424242429999'
+- assertVisible:
+    id: Payment_CardNumberField
+    text: 4242 4242 4242 4242
+- tapOn:
+    id: Payment_ExpiryField
+- inputText: '1230'
+- tapOn:
+    id: Payment_CvcField
+- inputText: '123'
+- hideKeyboard
+- assertNotVisible:
+    id: Payment_CardNumberError
+
+- tapOn:
+    id: Payment_PayButton
+- assertVisible:
+    id: PaymentResult_ProcessingPage
+- extendedWaitUntil:
+    visible:
+      id: PaymentResult_DeclinedPage
+    timeout: 10000
+- assertVisible: .*Payment declined.*
+
+# "Try again" returns to the filled card form.
+- tapOn:
+    id: PaymentResult_RetryButton
+- assertVisible:
+    id: Payment_Page
+- assertVisible:
+    id: Payment_CardNumberField
+    text: 4242 4242 4242 4242

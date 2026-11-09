@@ -1,0 +1,116 @@
+# Main scenario: NYC Icons Express purchased end-to-end, with the negative
+# checks the assignment asks for along the way. Each numbered section maps
+# to a step of the assignment.
+#
+# Card payment is always declined in this build (see card_payment_declined.yaml),
+# so the order is completed with the MAESTROFREE promo code.
+appId: com.ventrata.maestro_booking_demo
+name: Purchase NYC Icons Express (happy path + validations)
+tags:
+  - e2e
+---
+- runScript: ../scripts/test_data.js
+- runFlow: ../subflows/launch_clean.yaml
+
+# --- 1. Select the package ------------------------------------------------------
+- runFlow:
+    file: ../subflows/continue_to.yaml
+    env:
+      BUTTON_ID: Home_PackageButton
+      NEXT_PAGE_ID: Tickets_Page
+
+# --- 2. Tickets: rules first, then a random selection -------------------------
+- runFlow: ../subflows/verify_ticket_rules.yaml
+- runFlow: ../subflows/set_ticket_quantities.yaml
+- runFlow:
+    file: ../subflows/continue_to.yaml
+    env:
+      BUTTON_ID: Tickets_ContinueButton
+      NEXT_PAGE_ID: DateTime_Page
+
+# --- 3. Date & time: locking + Reset selection, then every product ------------
+- runFlow: ../subflows/verify_reset_selection.yaml
+- runFlow: ../subflows/confirm_required_dates.yaml
+- runFlow:
+    file: ../subflows/continue_to.yaml
+    env:
+      BUTTON_ID: DateTime_ContinueButton
+      NEXT_PAGE_ID: Questions_Page
+
+# --- 4. Questions: empty submit is blocked, then required fields only ---------
+- tapOn:
+    id: Questions_ContinueButton
+- assertVisible:
+    id: Questions_ValidationError
+    text: This field is required.
+- assertVisible:
+    id: Questions_Page
+- runFlow: ../subflows/answer_required_questions.yaml
+- runFlow:
+    file: ../subflows/continue_to.yaml
+    env:
+      BUTTON_ID: Questions_ContinueButton
+      NEXT_PAGE_ID: Checkout_Page
+
+# --- 5. Checkout ---------------------------------------------------------------
+# Price = adults x 30 + children x 15, plus 10 % booking fee.
+- assertVisible:
+    id: Checkout_PriceTotal
+    text: '${"Amount due incl. VAT: " + output.td.totalPattern + " €"}'
+- assertVisible:
+    text: '${"Pay " + output.td.totalPattern + " €"}'
+    childOf:
+      id: Checkout_PayOrConfirmButton
+
+# Empty contact form is rejected field by field.
+- tapOn:
+    id: Checkout_PayOrConfirmButton
+- assertVisible:
+    id: Checkout_FirstNameError
+- assertVisible:
+    id: Checkout_LastNameError
+- assertVisible:
+    id: Checkout_CountryError
+- assertVisible:
+    id: Checkout_StateProvinceError
+- assertVisible:
+    id: Checkout_Page
+
+# Promo first: contact details typed before the promo round trip are lost
+# (BUG-02 in REPORT.md).
+- runFlow:
+    file: ../subflows/apply_promo_code.yaml
+    env:
+      PROMO_CODE: ${output.td.promoCode}
+- assertVisible:
+    id: Checkout_PromoAppliedChip
+- assertVisible:
+    id: Checkout_PriceTotal
+    text: 'Amount due incl. VAT: 0\.00 €'
+- assertVisible:
+    text: Confirm order
+    childOf:
+      id: Checkout_PayOrConfirmButton
+
+- runFlow: ../subflows/fill_contact_details.yaml
+- assertNotVisible:
+    id: Checkout_FirstNameError
+- runFlow:
+    file: ../subflows/continue_to.yaml
+    env:
+      BUTTON_ID: Checkout_PayOrConfirmButton
+      NEXT_PAGE_ID: Success_Page
+
+# --- 6. Success: the order matches what was booked ----------------------------
+- runFlow: ../subflows/verify_success_summary.yaml
+
+# Home starts a brand-new booking.
+- scrollUntilVisible:
+    element:
+      id: Success_PrimaryActionButton
+- tapOn:
+    id: Success_PrimaryActionButton
+- extendedWaitUntil:
+    visible:
+      id: Home_Page
+    timeout: 5000

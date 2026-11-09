@@ -1,0 +1,25 @@
+# On the Tickets page (both counters at 0): sets output.td.adults / children.
+appId: com.ventrata.maestro_booking_demo
+---
+- repeat:
+    times: ${output.td.adults}
+    commands:
+      - tapOn:
+          id: Tickets_AdultIncrementButton
+- runFlow:
+    when:
+      true: ${output.td.children > 0}
+    commands:
+      - repeat:
+          times: ${output.td.children}
+          commands:
+            - tapOn:
+                id: Tickets_ChildIncrementButton
+- assertVisible:
+    id: Tickets_AdultCount
+    text: ${String(output.td.adults)}
+- assertVisible:
+    id: Tickets_ChildCount
+    text: ${String(output.td.children)}
+- assertNotVisible:
+    id: Tickets_ChildRequiresAdultError

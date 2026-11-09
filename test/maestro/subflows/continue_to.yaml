@@ -1,0 +1,13 @@
+# Taps a "next step" button and waits for the next page.
+# Continue / Confirm actions show a simulated 3-8 s backend-latency overlay,
+# so we wait on the destination page id instead of using fixed sleeps.
+#
+# env: BUTTON_ID, NEXT_PAGE_ID
+appId: com.ventrata.maestro_booking_demo
+---
+- tapOn:
+    id: ${BUTTON_ID}
+- extendedWaitUntil:
+    visible:
+      id: ${NEXT_PAGE_ID}
+    timeout: 15000

@@ -1,0 +1,69 @@
+# On the Date & Time page: confirms every product of the package.
+#   0 Empire State   - calendar (unlocks the rest)
+#   1 Madame Tussauds - time slot
+#   2 Hop-on Hop-off  - optional, time slot >= 2 h after Madame
+#   3 Statue of Liberty ferry - date only, confirms without a dialog
+appId: com.ventrata.maestro_booking_demo
+---
+- tapOn:
+    id: DateTime_Product0_SelectButton
+- assertVisible:
+    id: Calendar_Dialog
+- tapOn:
+    id: Calendar_NextMonthButton
+- tapOn:
+    id: Calendar_Day${output.td.visitDay}
+- tapOn:
+    id: Calendar_SaveButton
+- assertVisible:
+    id: DateTime_Product0_ConfirmedDate
+    text: ${output.td.visitDatePattern}
+
+- tapOn:
+    id: DateTime_Product1_SelectButton
+- assertVisible:
+    id: Timeslot_LockedDateText
+    text: ${output.td.visitDatePattern}
+- tapOn:
+    id: Timeslot_Slot_${output.td.madameSlotId}
+- tapOn:
+    id: Timeslot_SaveButton
+- assertVisible:
+    id: DateTime_Product1_ConfirmedDate
+    text: '${output.td.visitDatePattern + " " + output.td.madameSlot}'
+
+# Optional product, picked to exercise the "2 hours after Madame" rule.
+- tapOn:
+    id: DateTime_Product2_SelectButton
+- assertVisible:
+    id: Timeslot_Slot_${output.td.hopOnSlotId}
+- assertNotVisible:
+    id: Timeslot_Slot_${output.td.hopOnTooEarlySlotId}
+- tapOn:
+    id: Timeslot_Slot_${output.td.hopOnSlotId}
+- tapOn:
+    id: Timeslot_SaveButton
+- assertVisible:
+    id: DateTime_Product2_ConfirmedDate
+    text: '${output.td.visitDatePattern + " " + output.td.hopOnSlot}'
+
+# Even with the other three products confirmed, the mandatory ferry date
+# must still block Continue. Check the child because the id wrapper always
+# reports enabled=true.
+- assertVisible:
+    text: Continue
+    enabled: false
+    childOf:
+      id: DateTime_ContinueButton
+- assertNotVisible:
+    id: DateTime_Product3_ConfirmedDate
+- tapOn:
+    id: DateTime_Product3_SelectButton
+- assertVisible:
+    id: DateTime_Product3_ConfirmedDate
+    text: ${output.td.visitDatePattern}
+- assertVisible:
+    text: Continue
+    enabled: true
+    childOf:
+      id: DateTime_ContinueButton

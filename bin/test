@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  echo 'Usage: ./bin/test --ui | --headless [AVD_NAME]'
+  echo 'UI uses a running device. Headless starts a separate emulator and stops it on exit.'
+}
+mode="${1:-}"
+case "$mode" in
+  --help|-h) usage; exit 0 ;;
+  --ui) [[ $# -eq 1 ]] || { usage; exit 2; } ;;
+  --headless) [[ $# -le 2 ]] || { usage; exit 2; } ;;
+  *) usage; exit 2 ;;
+esac
+project_root="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$project_root"
+command -v maestro >/dev/null || { echo 'Maestro must be on PATH.' >&2; exit 1; }
+if [[ "$mode" == --ui ]]; then
+  exec maestro test test/maestro
+fi
+command -v emulator >/dev/null || { echo 'Add the Android SDK emulator directory to PATH.' >&2; exit 1; }
+command -v adb >/dev/null || { echo 'Add the Android SDK platform-tools directory to PATH.' >&2; exit 1; }
+apk="$project_root/build/app/outputs/flutter-apk/app-debug.apk"
+[[ -f "$apk" ]] || { echo 'Build the app first: flutter build apk --debug' >&2; exit 1; }
+avds="$(emulator -list-avds)"
+avd="${2:-${MAESTRO_AVD:-}}"
+if [[ -z "$avd" ]]; then
+  if [[ -z "$avds" || "$avds" == *$'\n'* ]]; then
+    echo 'Choose an AVD: ./bin/test --headless AVD_NAME' >&2
+    printf '%s\n' "$avds" >&2
+    exit 1
+  fi
+  avd="$avds"
+fi
+found=false
+while IFS= read -r candidate; do
+  [[ "$candidate" != "$avd" ]] || found=true
+done <<< "$avds"
+[[ "$found" == true ]] || { echo "Unknown AVD: $avd" >&2; exit 1; }
+# An AVD cannot normally be opened twice, even on different emulator ports.
+while IFS= read -r running_serial; do
+  [[ -n "$running_serial" ]] || continue
+  running_avd="$(adb -s "$running_serial" emu avd name 2>/dev/null | tr -d '\r' | head -n 1)" || running_avd=""
+  if [[ "$running_avd" == "$avd" ]]; then
+    echo "AVD '$avd' is already running as $running_serial." >&2
+    echo 'Close its emulator window, then rerun this command.' >&2
+    echo "Or stop it explicitly: adb -s $running_serial emu kill" >&2
+    exit 1
+  fi
+done < <(adb devices | awk '$1 ~ /^emulator-/ && $2 == "device" {print $1}')
+# Use a dedicated port and target only the emulator started by this script.
+port=5580
+serial="emulator-$port"
+if adb devices | awk '{print $1}' | grep -Fxq "$serial"; then
+  echo "$serial is already running; stop it before starting this command." >&2
+  exit 1
+fi
+log_file="$(mktemp "${TMPDIR:-/tmp}/maestro-emulator.XXXXXX")"
+emulator -avd "$avd" -port "$port" -no-window -no-audio >"$log_file" 2>&1 &
+emulator_pid=$!
+cleanup() {
+  if kill -0 "$emulator_pid" 2>/dev/null; then
+    adb -s "$serial" emu kill >/dev/null 2>&1 || kill "$emulator_pid" 2>/dev/null || true
+  fi
+  wait "$emulator_pid" 2>/dev/null || true
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+printf 'Starting %s headlessly (emulator log: %s)\n' "$avd" "$log_file"
+booted=false
+for ((attempt=0; attempt<180; attempt++)); do
+  if ! kill -0 "$emulator_pid" 2>/dev/null; then
+    cat "$log_file" >&2
+    exit 1
+  fi
+  if [[ "$(adb -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == 1 ]]; then
+    booted=true
+    break
+  fi
+  sleep 1
+done
+[[ "$booted" == true ]] || { echo "Emulator boot timed out. See $log_file" >&2; exit 1; }
+adb -s "$serial" install -r "$apk"
+maestro --device "$serial" test test/maestro

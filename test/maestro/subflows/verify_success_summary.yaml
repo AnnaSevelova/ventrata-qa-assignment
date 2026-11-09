@@ -1,0 +1,154 @@
+# On the Success page of a free (promo) order. Checks that everything that
+# was booked is shown: tickets, every product with its date/time, and the
+# full price breakdown. Literal prices and dates are escaped as regexes.
+# Each field is scrolled into view before its positive assertion.
+appId: com.ventrata.maestro_booking_demo
+---
+- scrollUntilVisible:
+    element:
+      text: Thank you for your purchase!
+    direction: UP
+- assertVisible: Thank you for your purchase!
+- scrollUntilVisible:
+    element:
+      id: Success_FreeBadge
+- assertVisible:
+    id: Success_FreeBadge
+# No semantic id is exposed for the order code. Its generator uses eight
+# uppercase letters/digits, excluding ambiguous I, O, 0 and 1. Flutter may
+# merge the following Order summary heading into the same accessibility label.
+- scrollUntilVisible:
+    element:
+      text: 'Order code: [ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}(\nOrder summary)?'
+- assertVisible:
+    text: 'Order code: [ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}(\nOrder summary)?'
+
+# Tickets
+- scrollUntilVisible:
+    element:
+      id: Success_UnitTypeRow_adult
+- assertVisible:
+    id: Success_UnitTypeRow_adult
+    text: '${output.td.adults + " × Adult"}'
+- runFlow:
+    when:
+      true: ${output.td.children > 0}
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: Success_UnitTypeRow_child
+      - assertVisible:
+          id: Success_UnitTypeRow_child
+          text: '${output.td.children + " × Child"}'
+- runFlow:
+    when:
+      true: ${output.td.children == 0}
+    commands:
+      - assertNotVisible:
+          id: Success_UnitTypeRow_child
+
+# Products with dates / times
+- scrollUntilVisible:
+    element:
+      id: Success_ProductSummary_0
+- assertVisible:
+    id: Success_ProductSummary_0
+    text: Empire State Building – Observatory Admission
+- scrollUntilVisible:
+    element:
+      id: Success_Product0_DateField
+- assertVisible:
+    id: Success_Product0_DateField
+    text: ${output.td.visitDatePattern}
+- scrollUntilVisible:
+    element:
+      id: Success_ProductSummary_1
+- assertVisible:
+    id: Success_ProductSummary_1
+    text: Madame Tussauds New York
+- scrollUntilVisible:
+    element:
+      id: Success_Product1_DateField
+- assertVisible:
+    id: Success_Product1_DateField
+    text: ${output.td.visitDatePattern}
+- scrollUntilVisible:
+    element:
+      id: Success_Product1_TimeField
+- assertVisible:
+    id: Success_Product1_TimeField
+    text: ${output.td.madameSlot}
+- scrollUntilVisible:
+    element:
+      id: Success_ProductSummary_2
+- assertVisible:
+    id: Success_ProductSummary_2
+    text: Hop-on Hop-off - 24 hours
+- scrollUntilVisible:
+    element:
+      id: Success_Product2_DateField
+- assertVisible:
+    id: Success_Product2_DateField
+    text: ${output.td.visitDatePattern}
+- scrollUntilVisible:
+    element:
+      id: Success_Product2_TimeField
+- assertVisible:
+    id: Success_Product2_TimeField
+    text: ${output.td.hopOnSlot}
+- scrollUntilVisible:
+    element:
+      id: Success_ProductSummary_3
+- assertVisible:
+    id: Success_ProductSummary_3
+    text: Statue of Liberty & Ellis Island Ferry Tour
+- scrollUntilVisible:
+    element:
+      id: Success_Product3_DateField
+- assertVisible:
+    id: Success_Product3_DateField
+    text: ${output.td.visitDatePattern}
+- assertNotVisible:
+    id: Success_Product3_TimeField
+
+# Price breakdown
+- scrollUntilVisible:
+    element:
+      id: Success_UnitPriceRow_adult
+- assertVisible:
+    id: Success_UnitPriceRow_adult
+    text: '${"Adult \\(" + output.td.adults + " × 30\\.00 €\\)\n" + output.td.adultLinePattern + " €"}'
+- runFlow:
+    when:
+      true: ${output.td.children > 0}
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: Success_UnitPriceRow_child
+      - assertVisible:
+          id: Success_UnitPriceRow_child
+          text: '${"Child \\(" + output.td.children + " × 15\\.00 €\\)\n" + output.td.childLinePattern + " €"}'
+- scrollUntilVisible:
+    element:
+      id: Success_BookingFeeRow
+- assertVisible:
+    id: Success_BookingFeeRow
+    text: '${"Booking fee \\(10%\\)\n" + output.td.bookingFeePattern + " €"}'
+- scrollUntilVisible:
+    element:
+      id: Success_OriginalPriceRow
+- assertVisible:
+    id: Success_OriginalPriceRow
+    text: '${"Original price\n" + output.td.totalPattern + " €"}'
+- scrollUntilVisible:
+    element:
+      id: Success_DiscountRow
+- assertVisible:
+    id: Success_DiscountRow
+    text: '${"Discount \\(promo code\\)\n-" + output.td.totalPattern + " €"}'
+- scrollUntilVisible:
+    element:
+      id: Success_FinalTotal
+- assertVisible:
+    id: Success_FinalTotal
+    text: 'Total due\n0\.00 €'

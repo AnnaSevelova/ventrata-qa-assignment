@@ -1,0 +1,80 @@
+# KNOWN BUG - expected to FAIL until fixed (see REPORT.md, BUG-03).
+#
+# The promo discount is stored as a fixed amount (the total at the moment the
+# code was applied). If the customer then goes back and adds a ticket, the
+# "Promo (FREE)" chip stays, but the order is no longer free: the customer is
+# charged only for the difference.
+appId: com.ventrata.maestro_booking_demo
+name: "[KNOWN BUG] FREE promo becomes partial after adding a ticket"
+tags:
+  - known-bug
+---
+- runScript:
+    file: ../scripts/test_data.js
+    env:
+      ADULTS: 1
+      CHILDREN: 0
+      MADAME_HOUR: 10
+- runFlow: ../subflows/book_until_checkout.yaml
+- runFlow:
+    file: ../subflows/apply_promo_code.yaml
+    env:
+      PROMO_CODE: ${output.td.promoCode}
+- assertVisible:
+    id: Checkout_PriceTotal
+    text: 'Amount due incl. VAT: 0\.00 €'
+
+# Back to Tickets (Checkout -> Questions -> Date & Time -> Tickets), add 1 adult.
+- runFlow:
+    file: ../subflows/go_back.yaml
+    env:
+      FROM_PAGE: Checkout_Page
+      TO_PAGE: Questions_Page
+- runFlow:
+    file: ../subflows/go_back.yaml
+    env:
+      FROM_PAGE: Questions_Page
+      TO_PAGE: DateTime_Page
+- runFlow:
+    file: ../subflows/go_back.yaml
+    env:
+      FROM_PAGE: DateTime_Page
+      TO_PAGE: Tickets_Page
+- tapOn:
+    id: Tickets_AdultIncrementButton
+- assertVisible:
+    id: Tickets_AdultCount
+    text: '2'
+- runFlow:
+    file: ../subflows/continue_to.yaml
+    env:
+      BUTTON_ID: Tickets_ContinueButton
+      NEXT_PAGE_ID: DateTime_Page
+# Dates are kept in state, so Continue is available straight away.
+- runFlow:
+    file: ../subflows/continue_to.yaml
+    env:
+      BUTTON_ID: DateTime_ContinueButton
+      NEXT_PAGE_ID: Questions_Page
+# Regenerate the expected data for the new order (2 adults) instead of
+# patching single fields, so every value in output.td stays consistent.
+- runScript:
+    file: ../scripts/test_data.js
+    env:
+      ADULTS: 2
+      CHILDREN: 0
+      MADAME_HOUR: 10
+- runFlow: ../subflows/answer_required_questions.yaml
+- runFlow:
+    file: ../subflows/continue_to.yaml
+    env:
+      BUTTON_ID: Questions_ContinueButton
+      NEXT_PAGE_ID: Checkout_Page
+
+# The promo chip still says FREE ...
+- assertVisible:
+    id: Checkout_PromoAppliedChip
+# ... so the order must be free. Actual: 66.00 - 33.00 = 33.00 EUR.
+- assertVisible:
+    id: Checkout_PriceTotal
+    text: 'Amount due incl. VAT: 0\.00 €'

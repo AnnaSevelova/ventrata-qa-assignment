@@ -1,0 +1,31 @@
+# Shortcut used by the secondary flows: Home -> Checkout with output.td data
+# (no negative checks - those live in the main purchase flow).
+appId: com.ventrata.maestro_booking_demo
+---
+- runFlow: launch_clean.yaml
+- runFlow:
+    file: continue_to.yaml
+    env:
+      BUTTON_ID: Home_PackageButton
+      NEXT_PAGE_ID: Tickets_Page
+- runFlow: set_ticket_quantities.yaml
+- runFlow:
+    file: continue_to.yaml
+    env:
+      BUTTON_ID: Tickets_ContinueButton
+      NEXT_PAGE_ID: DateTime_Page
+- runFlow: confirm_required_dates.yaml
+- runFlow:
+    file: continue_to.yaml
+    env:
+      BUTTON_ID: DateTime_ContinueButton
+      NEXT_PAGE_ID: Questions_Page
+- runFlow: answer_required_questions.yaml
+- runFlow:
+    file: continue_to.yaml
+    env:
+      BUTTON_ID: Questions_ContinueButton
+      NEXT_PAGE_ID: Checkout_Page
+- assertVisible:
+    id: Checkout_PriceTotal
+    text: '${"Amount due incl. VAT: " + output.td.totalPattern + " €"}'

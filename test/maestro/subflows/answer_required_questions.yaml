@@ -1,0 +1,35 @@
+# On the Questions page: fills ONLY the required fields
+#   - "How will you be arriving?" text area
+#   - "How did you hear about us?" select
+#   - "Ticket holder confirmation" checkbox, once per ticket
+appId: com.ventrata.maestro_booking_demo
+---
+- tapOn:
+    id: Questions_BookingTextArea
+- inputText: By subway
+- hideKeyboard
+- tapOn:
+    id: Questions_BookingSelect
+# Dropdown options carry no ids - matched by their visible label.
+- tapOn: Social media
+- assertVisible:
+    id: Questions_BookingSelect
+    text: Social media
+
+- evalScript: ${output.ticketIdx = 0}
+- repeat:
+    while:
+      true: ${output.ticketIdx < output.td.tickets}
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: Questions_PerTicketCheckbox_${output.ticketIdx}
+      - tapOn:
+          id: Questions_PerTicketCheckbox_${output.ticketIdx}
+      # The id sits on a wrapper; the checked state lives on its child.
+      - assertVisible:
+          text: I confirm
+          checked: true
+          childOf:
+            id: Questions_PerTicketCheckbox_${output.ticketIdx}
+      - evalScript: ${output.ticketIdx = output.ticketIdx + 1}

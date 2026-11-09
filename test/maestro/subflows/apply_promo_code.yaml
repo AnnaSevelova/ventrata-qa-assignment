@@ -1,0 +1,30 @@
+# From Checkout: applies a promo code and returns to Checkout.
+#
+# There is no promo input on Checkout. Tapping "Enter promo code" only shows a
+# generic "Error." snackbar and unlocks a promo field on the PREVIOUS step
+# (Questions). The code is applied when Questions is submitted again.
+#
+# env: PROMO_CODE
+appId: com.ventrata.maestro_booking_demo
+---
+- tapOn:
+    id: Checkout_EnterPromoButton
+- assertNotVisible:
+    id: Checkout_EnterPromoButton
+- runFlow:
+    file: go_back.yaml
+    env:
+      FROM_PAGE: Checkout_Page
+      TO_PAGE: Questions_Page
+- scrollUntilVisible:
+    element:
+      id: Questions_PromoCodeField
+- tapOn:
+    id: Questions_PromoCodeField
+- inputText: ${PROMO_CODE}
+- hideKeyboard
+- runFlow:
+    file: continue_to.yaml
+    env:
+      BUTTON_ID: Questions_ContinueButton
+      NEXT_PAGE_ID: Checkout_Page

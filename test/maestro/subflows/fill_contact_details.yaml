@@ -1,0 +1,32 @@
+# On Checkout: fills the required contact fields and accepts both terms.
+# City is optional and deliberately left empty.
+appId: com.ventrata.maestro_booking_demo
+---
+- tapOn:
+    id: Checkout_FirstNameField
+- inputText: Jana
+- tapOn:
+    id: Checkout_LastNameField
+- inputText: Tester
+- tapOn:
+    id: Checkout_StateProvinceField
+- inputText: Prague
+- hideKeyboard
+- tapOn:
+    id: Checkout_CountryField
+- tapOn:
+    id: Checkout_CountryOption_cz
+- tapOn:
+    id: Checkout_BookingTermsCheckbox
+- tapOn:
+    id: Checkout_CancellationTermsCheckbox
+- assertVisible:
+    text: I agree to the booking terms.
+    checked: true
+    childOf:
+      id: Checkout_BookingTermsCheckbox
+- assertVisible:
+    text: I agree to the cancellation terms in case I request a refund.
+    checked: true
+    childOf:
+      id: Checkout_CancellationTermsCheckbox

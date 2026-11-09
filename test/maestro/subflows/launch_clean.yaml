@@ -1,0 +1,14 @@
+# Fresh app (cleared state) on the Home screen, switched to English.
+# The app defaults to Czech; English keeps text assertions readable.
+appId: com.ventrata.maestro_booking_demo
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+- extendedWaitUntil:
+    visible:
+      id: Home_Page
+    timeout: 20000
+- tapOn:
+    id: Home_LanguageToggleButton
+- assertVisible: Select this adventure

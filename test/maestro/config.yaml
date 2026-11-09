@@ -1,0 +1,5 @@
+# Workspace config for `maestro test test/maestro`.
+# Runs the regular suite only; known_bugs/ flows are expected to fail and are
+# run explicitly (`maestro test test/maestro/known_bugs`).
+flows:
+  - flows/*

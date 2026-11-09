@@ -47,6 +47,25 @@ lib/
 
 ## Tests
 
+Maestro purchase-flow tests, run commands, and QA findings are documented in
+[test/maestro/README.md](test/maestro/README.md). Both the visible and headless
+Android emulator suites passed; results are recorded in
+[test/maestro/REPORT.md](test/maestro/REPORT.md).
+
+With the app installed on a running Android device:
+
+```bash
+./bin/test --ui
+```
+
+For a headless emulator (build the debug APK first):
+
+```bash
+./bin/test --headless AVD_NAME
+```
+
+Flutter tests:
+
 ```bash
 flutter test
 ```

@@ -1,0 +1,109 @@
+# On a fresh Date & Time page. Checks that only product 0 is unlocked, makes
+# selections, and verifies that "Reset selection" clears them and locks the
+# other products again. Leaves the page with nothing selected.
+appId: com.ventrata.maestro_booking_demo
+---
+# Initially only product 0 is selectable.
+- assertVisible:
+    text: Select date and time
+    enabled: true
+    childOf:
+      id: DateTime_Product0_SelectButton
+- assertVisible:
+    text: Select date and time
+    enabled: false
+    childOf:
+      id: DateTime_Product1_SelectButton
+- assertVisible:
+    text: Select date and time
+    enabled: false
+    childOf:
+      id: DateTime_Product3_SelectButton
+- assertVisible:
+    text: Select date and time
+    enabled: false
+    childOf:
+      id: DateTime_Product2_SelectButton
+- assertNotVisible:
+    id: DateTime_ResetSelectionLink
+
+# Select dates for all four products, including optional Hop-on.
+- tapOn:
+    id: DateTime_Product0_SelectButton
+- tapOn:
+    id: Calendar_NextMonthButton
+- tapOn:
+    id: Calendar_Day${output.td.visitDay}
+- tapOn:
+    id: Calendar_SaveButton
+- tapOn:
+    id: DateTime_Product1_SelectButton
+- tapOn:
+    id: Timeslot_Slot_${output.td.madameSlotId}
+- tapOn:
+    id: Timeslot_SaveButton
+- tapOn:
+    id: DateTime_Product2_SelectButton
+- tapOn:
+    id: Timeslot_Slot_${output.td.hopOnSlotId}
+- tapOn:
+    id: Timeslot_SaveButton
+- tapOn:
+    id: DateTime_Product3_SelectButton
+- assertVisible:
+    id: DateTime_Product0_ConfirmedDate
+- assertVisible:
+    id: DateTime_Product1_ConfirmedDate
+- assertVisible:
+    id: DateTime_Product2_ConfirmedDate
+- assertVisible:
+    id: DateTime_Product3_ConfirmedDate
+
+# Reset clears every selection.
+- tapOn:
+    id: DateTime_ResetSelectionLink
+- assertNotVisible:
+    id: DateTime_Product0_ConfirmedDate
+- assertNotVisible:
+    id: DateTime_Product1_ConfirmedDate
+- assertNotVisible:
+    id: DateTime_Product2_ConfirmedDate
+- assertNotVisible:
+    id: DateTime_Product3_ConfirmedDate
+- assertNotVisible:
+    id: DateTime_ResetSelectionLink
+
+# After Reset the accessibility "enabled" flags are briefly stale on Android,
+# so the lock is verified by behaviour. Each tap is followed by
+# waitForAnimationToEnd, so a dialog or overlay that opens with a delay is
+# on screen before we assert it isn't.
+- tapOn:
+    id: DateTime_Product1_SelectButton
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: Timeslot_Dialog
+- assertNotVisible:
+    id: DateTime_Product1_ConfirmedDate
+- tapOn:
+    id: DateTime_Product2_SelectButton
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: Timeslot_Dialog
+- assertNotVisible:
+    id: DateTime_Product2_ConfirmedDate
+- tapOn:
+    id: DateTime_Product3_SelectButton
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: Timeslot_Dialog
+- assertNotVisible:
+    id: DateTime_Product3_ConfirmedDate
+- tapOn:
+    id: DateTime_ContinueButton
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: Loading_Overlay
+- assertNotVisible:
+    id: Questions_Page
+- assertVisible:
+    id: DateTime_Page

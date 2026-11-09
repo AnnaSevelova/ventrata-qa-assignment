@@ -1,0 +1,67 @@
+# On the Tickets page with both counters at 0. Checks the two quantity
+# rules and leaves the counters at 0 again:
+#   - a child ticket needs at least one adult
+#   - max output.td.maxTickets (20) tickets combined
+appId: com.ventrata.maestro_booking_demo
+---
+# Nothing selected: Continue is disabled.
+- assertVisible:
+    text: Continue
+    enabled: false
+    childOf:
+      id: Tickets_ContinueButton
+
+# A child alone is rejected.
+- tapOn:
+    id: Tickets_ChildIncrementButton
+- assertVisible:
+    id: Tickets_ChildRequiresAdultError
+    text: A child ticket requires at least one adult.
+- assertVisible:
+    text: Continue
+    enabled: false
+    childOf:
+      id: Tickets_ContinueButton
+
+# Adding an adult fixes it.
+- tapOn:
+    id: Tickets_AdultIncrementButton
+- assertNotVisible:
+    id: Tickets_ChildRequiresAdultError
+- assertVisible:
+    text: Continue
+    enabled: true
+    childOf:
+      id: Tickets_ContinueButton
+
+# Fill up to the cap (1 adult + 1 child already), then neither counter grows.
+- repeat:
+    times: ${output.td.maxTickets - 2}
+    commands:
+      - tapOn:
+          id: Tickets_AdultIncrementButton
+- tapOn:
+    id: Tickets_AdultIncrementButton
+- tapOn:
+    id: Tickets_ChildIncrementButton
+- assertVisible:
+    id: Tickets_AdultCount
+    text: ${String(output.td.maxTickets - 1)}
+- assertVisible:
+    id: Tickets_ChildCount
+    text: '1'
+
+# Back to 0 / 0.
+- repeat:
+    times: ${output.td.maxTickets - 1}
+    commands:
+      - tapOn:
+          id: Tickets_AdultDecrementButton
+- tapOn:
+    id: Tickets_ChildDecrementButton
+- assertVisible:
+    id: Tickets_AdultCount
+    text: '0'
+- assertVisible:
+    id: Tickets_ChildCount
+    text: '0'
