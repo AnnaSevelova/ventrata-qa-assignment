@@ -22,13 +22,13 @@ complete the order that way and document the rest.
 - **Steps:** any non-free order → Checkout → Pay → enter any valid-format card → Pay.
 - **Actual:** "Processing…" → **Payment declined** every time, whatever the input. Logcat prints `[QA-HINT] Card payment is always declined in test mode` and tells you to use `MAESTROFREE`.
 - The "Enter promo code / gift voucher" button on Checkout shows only an **"Error."** snackbar and disappears. The promo field then shows up on the *previous* step (Questions), with no hint in the UI.
-- The declined page also shows an **order code** for a failed payment, and a successful retry later gets a different code.
+- The declined page also shows an **order code** for a payment that failed, and an order later completed with the promo code gets a different code.
 - **Expected:** a test card that succeeds (or a clearly flagged sandbox), and promo entry on Checkout or a clear pointer to it.
 - **Automated:** `flows/card_payment_declined.yaml` pins the current behaviour.
 
 ### BUG-02 – Contact details are wiped by the promo round trip (Medium) **[device]**
 - **Steps:** Checkout → fill in first/last name, country, state, tick both terms → "Enter promo code" → back to Questions → enter `MAESTROFREE` → Continue.
-- **Actual:** the new Checkout screen is empty. The details are only saved when Pay/Confirm is pressed, although the code comment in `CheckoutScreen` says they're "prefilled from already-confirmed state".
+- **Actual:** the new Checkout screen is empty. The details are only saved when Pay/Confirm is pressed, although the code comment in `checkout_screen.dart` says to "prefill from already-confirmed state so that trip doesn't wipe out previously entered contact details".
 - **Expected:** the details stay.
 - **Workaround in the main flow:** apply the promo first, then fill in the contact form.
 
@@ -81,33 +81,24 @@ These are observations and proposed improvements, not confirmed requirement viol
 - `android/gradle.properties` asks for an 8 GB Gradle heap (`-Xmx8G`), which can fail the build on smaller CI runners.
 - The assignment says the app "works correctly" and ends on a *paid* order; see BUG-01.
 
-## Verification — 9 November 2026
+## Stability
 
-- Full suite (`maestro test test/maestro`): card-validation/decline flow
-  passed (3m 28s). Purchase flow reached Success with 3 adults and 17 children,
-  but failed at the new order-code selector (8m 59s).
-- Root cause: Flutter exposed `Order code: GNTJF687\nOrder summary` as one
-  accessibility label. The selector expected the order code alone. Updated
-  it to allow the merged heading while retaining the eight-character check.
-- Targeted emulator rerun of `verify_success_summary.yaml`, using the
-  completed order's quantities and 14:00 Madame slot: passed all Success
-  assertions, including the order code, all four products and price breakdown.
-  The helper now scrolls to the top first so it can also be rerun after a
-  previous check left the screen scrolled down.
-- Fresh full-suite rerun after this fix (user-reported terminal result):
-  **2/2 flows passed in 9m 13s**. Card-validation/decline flow: 3m 7s;
-  purchase flow: 6m 6s. This confirms the corrected Success assertions also
-  pass as part of the complete purchase flow.
-- Headless full-suite run (`./bin/test --headless maestro_pixel`,
-  user-reported terminal result): APK installation succeeded and **2/2 flows
-  passed in 7m 12s**. Card-validation/decline flow: 2m 8s; purchase flow:
-  5m 4s. This verifies the wrapper's emulator startup, APK installation and
-  targeted Maestro execution on a real emulator. Shutdown was not separately
-  confirmed in the supplied output.
+Final runs on 9 November 2026, Android emulator, random ticket quantities:
+
+| Run | Result |
+|---|---|
+| `maestro test test/maestro` (emulator window) | 2/2 passed in 9m 13s |
+| `./bin/test --headless maestro_pixel` | 2/2 passed in 7m 12s |
+| `./bin/test --headless maestro_pixel` | 2/2 passed in 7m 6s; emulator shut down afterwards |
+
+Earlier versions of the suite also passed 4 full runs in a row. One
+real-world catch along the way: Flutter can merge the order code and the
+"Order summary" heading into one accessibility label, so the order-code
+check allows for that.
 
 ## Build compatibility observations
 
-Observed in the supplied terminal output using Flutter 3.47.9 and Java 17.
+Observed with Flutter 3.47.9 and Java 17.
 These are maintenance notices, not purchase-flow defects: `flutter build
 apk --debug` completed successfully despite the warnings.
 
@@ -123,9 +114,7 @@ Flutter, Gradle, AGP, Kotlin and Java together, then rebuild and rerun tests.
 
 `flutter pub get` also reported newer dependency versions outside the
 current constraints. This notice did not prevent dependency resolution or
-the APK build. The local Xcode warning does not affect the Android target;
-the initial Java and `adb` errors were local environment configuration
-issues rather than app defects.
+the APK build.
 
 ## Not covered / next steps
 
@@ -134,8 +123,7 @@ What I'd automate next, in priority order:
 - "All times closed" for Madame Tussauds, made deterministic with the `Debug_SetForceClosed` hook.
 - Promo codes: invalid code, case-insensitivity (`cypressfree`), removing the promo restores the price.
 - BUG-02 as its own failing flow.
-
-- iOS run (no Xcode on the test machine).
+- iOS: not possible yet, because the repo has no `ios/` project. Once it's added, the flows should need few changes since they select by id; the text-matched Back button is the first thing to check.
 - Czech-language run of the main flow (ids are language-neutral except the radio buttons).
 - Back-navigation matrix: changing the date for product 0 after later steps, changing Madame's time after Hop-on was picked (the app clears Hop-on – worth a flow).
 - 52-week booking-window boundary (last bookable day, next-month button disabled).

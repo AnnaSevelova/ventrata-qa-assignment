@@ -74,7 +74,9 @@ the order code must match the app's eight-character format.
 ## Decisions and tradeoffs
 
 - **Ids first.** Selectors use the app's `Semantics(identifier)` ids. Visible
-  text is used only where no id exists (listed in the report).
+  text is used only where no id exists (listed in the report), to reach the
+  child of an id wrapper that holds the real enabled/checked state
+  (`childOf`), or to check what an id-located element says.
 - **No sleeps.** The app adds a random 3–8 s fake latency to every
   Continue/Confirm. `subflows/continue_to.yaml` waits for the next page's id
   instead (15 s timeout).
